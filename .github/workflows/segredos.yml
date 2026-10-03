@@ -1,0 +1,60 @@
+name: Verificar segredos
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  segredos:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      # This checkout supplies policy and executable code exclusively from the trusted base.
+      - name: Obter controles da base
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+          path: controles
+          persist-credentials: false
+          fetch-depth: 0
+
+      # PR content is data. Never run its scripts, package hooks, actions or workflows.
+      - name: Obter histórico a verificar
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          path: alvo
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Obter scanner fixado
+        shell: bash
+        run: |
+          set -euo pipefail
+          task_scan_dir="${RUNNER_TEMP}/radar-gitleaks"
+          mkdir -p "$task_scan_dir"
+          curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
+            --max-time 120 \
+            https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz \
+            --output "$task_scan_dir/gitleaks.tar.gz"
+          (cd "$task_scan_dir" && printf '%s  %s\n' \
+            '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb' \
+            'gitleaks.tar.gz' | sha256sum --check --status)
+          tar --no-same-owner -xzf "$task_scan_dir/gitleaks.tar.gz" -C "$task_scan_dir" gitleaks LICENSE
+
+      - name: Verificar histórico sem confiar na política da PR
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 controles/scripts/scan_secrets.py \
+            --binary "${RUNNER_TEMP}/radar-gitleaks/gitleaks" \
+            --repository alvo \
+            --config controles/.security/gitleaks.toml \
+            --report "${RUNNER_TEMP}/radar-gitleaks/summary.json"
