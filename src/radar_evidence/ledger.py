@@ -162,12 +162,22 @@ class Journal:
             raise IntegrityError("external checkpoint mismatch")
 
     def verify(self, expected_checkpoint):
+        """Verify historical integrity, not present citation eligibility.
+
+        Each receipt retains the scope used at assessment time. Consumers must
+        re-check Evidence against their current trusted Scope before reuse.
+        """
         with closing(self._connect()) as connection:
             _, actual = self._scan(connection)
             self._match(actual, expected_checkpoint)
         return actual
 
     def export_records(self, expected_checkpoint):
+        """Return detached historical receipts after checkpoint verification.
+
+        Recorded identity flags and positive verdicts are historical claims,
+        not fresh authentication, review approval or execution authority.
+        """
         with closing(self._connect()) as connection:
             records, actual = self._scan(connection)
             self._match(actual, expected_checkpoint)

@@ -5,7 +5,7 @@ recibos SQLite e exportação PROV-O selecionada. O núcleo Python 3.11+ usa
 somente a biblioteca padrão. Semantica é um motor opcional de terceiro;
 a biblioteca não é um fork ou renomeação dele.
 
-As fontes e os testes foram extraídos sem alteração de
+O núcleo inicial e seus testes foram extraídos sem alteração de
 [`avaliacao-rag-juridico` em `2fb8059d55974795c9db7bd4fa2540d4f5af5d2a`](https://github.com/ofelipepeixoto/avaliacao-rag-juridico/tree/2fb8059d55974795c9db7bd4fa2540d4f5af5d2a/packages/radar-evidence-kit).
 Este repositório separa o núcleo reutilizável dos consumidores. O
 [experimento com baseline e fixtures sintéticas](https://github.com/ofelipepeixoto/avaliacao-rag-juridico/tree/2fb8059d55974795c9db7bd4fa2540d4f5af5d2a/experiments/semantica)
@@ -23,7 +23,7 @@ python -m unittest discover -s tests -v
 ```
 
 O build usa `setuptools>=68`; o pacote instalado não tem dependências de
-runtime. Sem o motor opcional, a suíte tem 89 testes: 86 executados e os três
+runtime. Sem o motor opcional, a suíte tem 92 testes: 89 executados e os três
 testes reais do adapter explicitamente skipped. A CI verifica o núcleo em
 Python 3.11 e 3.12. A verificação local desta extração foi feita em Linux/Python
 3.12; a execução 3.11 depende do job de CI.
@@ -110,6 +110,14 @@ antigo é recusado. A reconciliação exige procedimento do operador com seu
 registro independente e backup; não substitua o checkpoint apenas recalculando
 a cadeia local. Retenha sempre o checkpoint mais recente.
 
+`verify` e `export_records` verificam a integridade do **histórico**, usando o
+Scope registrado em cada evento. Uma avaliação positiva antiga continua no
+histórico após mudança de revisão; ela não vale como citação atual. Antes de
+reutilizar uma evidência, o consumidor deve verificar os bytes do original,
+seu vínculo à revisão e ao texto, e chamar `check_evidence` com o Scope atual
+emitido pela aplicação. O kit não consulta revogação de identidade ou aprovações.
+Veja a [decisão de integração dos consumidores](docs/adr-consumer-boundaries.md).
+
 Limites: 1.000 recibos por diário, 64 KiB por registro e profundidade JSON 8.
 O append verifica a cadeia inteira: adequado a este laboratório pequeno, sem
 garantia de throughput ou prazo máximo. O diário contém o texto integral;
@@ -172,7 +180,7 @@ PYTHONDONTWRITEBYTECODE=1 RADAR_SEMANTICA_INTEGRATION=1 \
 Esta receita não instala o pacote SDK completo nem seus extras. Seus dez pins
 são versões efetivamente usadas; o probe bloqueia outros imports externos em
 um processo novo. Ele não é sandbox de rede nem substitui um ambiente confiável.
-A execução opcional ativa os três testes reais e executa os 89 testes do núcleo.
+A execução opcional ativa os três testes reais e executa os 92 testes da suíte.
 O baseline e os gates específicos do experimento permanecem no consumidor
 referenciado acima.
 
