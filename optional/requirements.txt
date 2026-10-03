@@ -1,0 +1,15 @@
+# Focused test recipe, Linux / Python 3.12. Observed versions, not guessed floors.
+# This does NOT install the complete Semantica package or its all/SDK extras.
+# Checkout semantica-agi/semantica at a1a8404e20bc146b481dad65cbe5dcccddae84ab
+# separately and place that checkout on PYTHONPATH (see README.md).
+# Mandatory imports of reasoning/__init__ reach kg/__init__, hence these deps.
+annotated-types==0.8.0
+networkx==3.7
+numpy==2.3.5
+pydantic==2.13.5
+pydantic-core==2.46.5
+python-dateutil==2.9.0.post0
+scipy==1.17.0
+six==1.17.0
+typing-extensions==4.16.0
+typing-inspection==0.4.4

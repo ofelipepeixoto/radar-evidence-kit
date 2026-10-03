@@ -1,0 +1,17 @@
+{
+  "expected_snapshot": "a1a8404e20bc146b481dad65cbe5dcccddae84ab",
+  "modules": {
+    "__init__.py": "3aa34f2dba1de32146fb9c567caaf8acaab83d87bb66a625f6cd6190f9deecf0",
+    "reasoning/_rule_matching.py": "dd01fc1dc3c7b3695faa935b4d5a7972a8fee0928aa115e9d6da3e98efbab49f",
+    "reasoning/_truth_maintenance_checkpoint.py": "6cd997d09da8982ac9796732b44509162f8d60ee54a3656a525501634be016e4",
+    "reasoning/_truth_maintenance_validation.py": "ef516243cec1da96aa5e9a22223648d94f082cdf0bc1f0c5edcca993a51dd1b0",
+    "reasoning/reasoner.py": "a5fad94a00bfd065f49b59d6fe8fc59a5aba872de1fc0a4c982ac85e24ed7e4c",
+    "reasoning/truth_maintenance.py": "492802a36c6c0b9e7b0c4ded5235db3e71758a4d8e638d4066459332b9d2c2af",
+    "reasoning/truth_maintenance_types.py": "c998e5d54a8fba4670c8d6050cab3e76a99f7ab676306e125eab0de4eb951b25",
+    "utils/exceptions.py": "70245f76609346d62678ecf5bfebea96362dc855a183723ce2732fcc378d3562",
+    "utils/logging.py": "e56a9fd21f88f7ce17e32b97fc4f248f5588d3d36ec498ebb6387e33d5c78185",
+    "utils/progress_tracker.py": "b58189e3f4b4720c55212d4cabb6ef1cb59b3bcc2f4f106281c8b5abfc5af3e5"
+  },
+  "supported_version": "0.7.0",
+  "verification_scope": "Only these ten source files; not the entire package or its dependencies."
+}
