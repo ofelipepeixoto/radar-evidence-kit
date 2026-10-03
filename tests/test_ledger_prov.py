@@ -3,12 +3,14 @@
 """Receipt integrity and PROV boundary regressions using synthetic local data."""
 
 from contextlib import closing
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 import hashlib
 import json
 import os
 from pathlib import Path
 import sqlite3
+from threading import Barrier
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
@@ -287,6 +289,69 @@ class JournalTests(unittest.TestCase):
             other.append(self.item, check_evidence(self.item, self.scope), event_id="other operator",
                          occurred_at=STAMP, expected_checkpoint=self.empty)
         self.assertEqual(self.journal.verify(checkpoint), checkpoint)
+
+    def concurrent_appends(self, event_ids):
+        """Race independent SQLite connections after both writers are ready."""
+        writers = [Journal(self.path, self.scope) for _ in event_ids]
+        barrier = Barrier(len(writers))
+
+        def write(writer, event_id):
+            barrier.wait(timeout=5)
+            try:
+                checkpoint = writer.append(
+                    self.item, check_evidence(self.item, self.scope),
+                    event_id=event_id, occurred_at=STAMP,
+                    expected_checkpoint=self.empty,
+                )
+            except IntegrityError as error:
+                return ("refused", str(error))
+            return ("committed", checkpoint)
+
+        with ThreadPoolExecutor(max_workers=len(writers)) as pool:
+            futures = [pool.submit(write, writer, event_id)
+                       for writer, event_id in zip(writers, event_ids)]
+            return [future.result(timeout=10) for future in futures]
+
+    def test_concurrent_writers_compare_checkpoint_under_sqlite_lock(self):
+        results = self.concurrent_appends(("writer-one", "writer-two"))
+        committed = [value for status, value in results if status == "committed"]
+        refused = [value for status, value in results if status == "refused"]
+        self.assertEqual(len(committed), 1)
+        self.assertEqual(refused, ["external checkpoint mismatch"])
+        self.assertEqual(committed[0].count, 1)
+        self.assertEqual(len(self.rows()), 1)
+        self.assertEqual(self.journal.verify(committed[0]), committed[0])
+
+    def test_concurrent_identical_replay_needs_latest_retained_checkpoint(self):
+        results = self.concurrent_appends(("shared-event", "shared-event"))
+        committed = [value for status, value in results if status == "committed"]
+        refused = [value for status, value in results if status == "refused"]
+        self.assertEqual(len(committed), 1)
+        self.assertEqual(refused, ["external checkpoint mismatch"])
+        checkpoint = committed[0]
+        retried = self.append(event_id="shared-event", checkpoint=checkpoint)
+        self.assertEqual(retried, checkpoint)
+        self.assertEqual(len(self.rows()), 1)
+
+    def test_historical_integrity_does_not_grant_current_citation_eligibility(self):
+        checkpoint = self.append()
+        current = trusted_scope(current_revisions={"document-fixture": 3})
+        reopened = Journal(self.path, current)
+        # The retained checkpoint still proves what the old assessment recorded.
+        self.assertEqual(reopened.verify(checkpoint), checkpoint)
+        receipt = reopened.export_records(checkpoint)[0]["event"]
+        self.assertIs(receipt["check"]["supported"], True)
+        self.assertEqual(receipt["scope"]["current_revisions"]["document-fixture"], 2)
+        # The consumer must re-assess against its present trusted scope.
+        historical = Evidence.from_dict(receipt["evidence"])
+        reassessed = check_evidence(historical, current)
+        self.assertFalse(reassessed.supported)
+        self.assertEqual(reassessed.reasons, ("stale_revision",))
+        with self.assertRaisesRegex(ValueError, "strict assessment"):
+            reopened.append(historical, check_evidence(historical, self.scope),
+                            event_id="reused-approval", occurred_at=STAMP,
+                            expected_checkpoint=checkpoint)
+        self.assertEqual(reopened.verify(checkpoint), checkpoint)
 
     def test_cross_tenant_and_project_rejected_even_as_unsupported_attempt(self):
         for overrides in ({"tenant_id": "tenant-other"}, {"project_id": "project-other"}):
