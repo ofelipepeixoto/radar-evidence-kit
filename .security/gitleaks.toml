@@ -1,0 +1,4 @@
+# Original Radar configuration. Always read this file from the trusted base checkout.
+title = "Radar secrets policy"
+[extend]
+useDefault = true

@@ -1,0 +1,25 @@
+name: Testar controle de segredos
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fixtures:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Obter controles e fixtures sem credenciais persistidas
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Obter scanner fixado e verificar checksum
+        run: bash scripts/install_gitleaks.sh "${RUNNER_TEMP}/radar-gitleaks"
+      - name: Testar falhas, redaction e bypasses com dados sintéticos
+        env:
+          RADAR_GITLEAKS_BINARY: ${{ runner.temp }}/radar-gitleaks/gitleaks
+        run: python3 -m unittest discover -s tests/security -p 'test_secrets.py' -v
