@@ -5,7 +5,9 @@ from .modelos import Evidence, Scope
 from .checks import EvidenceCheck, check_evidence
 from .ledger import Checkpoint, IntegrityError, Journal
 from .prov import export_prov
+from .occurrences import OccurrenceGroup, occurrence_id, group_occurrences
 
 __version__ = "0.1.0"
 __all__ = ["Evidence", "Scope", "EvidenceCheck", "check_evidence", "Checkpoint",
-           "IntegrityError", "Journal", "export_prov"]
+           "IntegrityError", "Journal", "export_prov", "OccurrenceGroup",
+           "occurrence_id", "group_occurrences"]

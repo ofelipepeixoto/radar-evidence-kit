@@ -12,7 +12,38 @@ Este repositório separa o núcleo reutilizável dos consumidores. O
 continua naquela revisão; seu corpus, runner e métricas não foram incorporados
 ao pacote.
 
-## Instalação e testes
+## Ocorrências de fonte e prévia de pesquisa
+
+`group_occurrences(records, scope)` preserva referências distintas quando dois
+documentos contêm texto igual. A identidade do conteúdo é separada da identidade
+da ocorrência (cliente, projeto, documento, revisão, página/span e hash do
+original). Repetições exatas são idempotentes; recibos de revisão conflitantes
+para uma ocorrência que seria incluída fazem a prévia inteira falhar, inclusive
+quando o outro recibo é rejeitado, pendente, sem revisor ou sem identidade
+verificada. A ordem dos registros não escolhe a decisão vigente. Entram somente registros aprovados, na revisão
+atual, com o indicador de identidade exigido pelo contrato.
+
+Isso corrige o contrato próprio deste pacote, não modifica nem reindexa o
+Odysseus. Os IDs antigos de `Evidence` e APIs anteriores permanecem compatíveis.
+O agrupamento é offline, limitado a 1.000 registros por chamada, sem novo banco,
+modelo, serviço ou dependência.
+
+O consumidor `python -m radar_evidence.research_preview --scope scope.json`
+recebe por stdin um snapshot `radar-evidence-snapshot-v1`, com os campos
+`schema` e `evidence`; o escopo vem de arquivo separado controlado pelo operador.
+Retorna `radar-research-preview-v1`, com grupos, ocorrências, contagens e decisão
+`needs_review` ou `abstained`. Input e escopo têm limite de 256 KiB, JSON com
+chaves duplicadas é recusado e erros não ecoam conteúdo documental.
+
+Os rótulos de revisão/identidade e o arquivo Scope precisam ser emitidos por uma
+aplicação confiável. A CLI **não autentica o emissor**, não lê os bytes originais,
+não confirma verdade jurídica, não publica e não gasta. Por isso o recibo mantém
+`issuerVerified: false`, `paidCallsEnabled: false` e
+`externalActionsEnabled: false`. O teste com fixtures usa identidade sintética.
+
+Veja [ADR de ocorrências](docs/adr/0001-content-and-source-occurrences.md).
+
+## Instalação e testes do núcleo
 
 Na raiz deste repositório, em um ambiente virtual:
 
@@ -23,7 +54,7 @@ python -m unittest discover -s tests -v
 ```
 
 O build usa `setuptools>=68`; o pacote instalado não tem dependências de
-runtime. Sem o motor opcional, a suíte tem 92 testes: 89 executados e os três
+runtime. Sem o motor opcional, a suíte tem 99 testes: 96 executados e os três
 testes reais do adapter explicitamente skipped. A CI verifica o núcleo em
 Python 3.11 e 3.12. A verificação local desta extração foi feita em Linux/Python
 3.12; a execução 3.11 depende do job de CI.
@@ -180,7 +211,7 @@ PYTHONDONTWRITEBYTECODE=1 RADAR_SEMANTICA_INTEGRATION=1 \
 Esta receita não instala o pacote SDK completo nem seus extras. Seus dez pins
 são versões efetivamente usadas; o probe bloqueia outros imports externos em
 um processo novo. Ele não é sandbox de rede nem substitui um ambiente confiável.
-A execução opcional ativa os três testes reais e executa os 92 testes da suíte.
+A execução opcional ativa os três testes reais e executa os 99 testes da suíte.
 O baseline e os gates específicos do experimento permanecem no consumidor
 referenciado acima.
 
