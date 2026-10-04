@@ -67,18 +67,29 @@ def group_occurrences(records: list[Evidence], scope: Scope) -> tuple[Occurrence
         raise TypeError("Scope required")
     grouped: dict[str, dict[str, Evidence]] = {}
     texts: dict[str, Evidence] = {}
+    receipts: dict[str, str] = {}
+    conflicts: set[str] = set()
+    included: set[str] = set()
     for item in records:
-        if not check_evidence(item, scope).supported:
+        checked = check_evidence(item, scope)
+        occurrence = occurrence_id(item)
+        previous = receipts.setdefault(occurrence, checked.evidence_id)
+        if previous != checked.evidence_id:
+            conflicts.add(occurrence)
+        # Review denial must not erase a divergent receipt before comparison.
+        # Identity includes tenant/project/revision, so excluded scopes cannot
+        # conflict with an otherwise eligible occurrence in this Scope.
+        if not checked.supported:
             continue
+        included.add(occurrence)
         content = _digest(["radar-content-v1", scope.tenant_id, scope.project_id,
                            item.text_sha256])
-        occurrence = occurrence_id(item)
         bucket = grouped.setdefault(content, {})
-        existing = bucket.get(occurrence)
-        if existing is not None and existing.evidence_id != item.evidence_id:
-            raise ValueError("conflicting occurrence review")
         bucket[occurrence] = item
         texts[content] = item
+    if conflicts & included:
+        # Reject the entire preview; never return a partial approved subset.
+        raise ValueError("conflicting occurrence review")
     return tuple(OccurrenceGroup(content, texts[content].text_sha256,
                                  texts[content].text,
                                  tuple(bucket[key] for key in sorted(bucket)))

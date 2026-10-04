@@ -44,15 +44,53 @@ class OccurrenceTests(unittest.TestCase):
                        {"tenant_id": "other"}):
             self.assertNotEqual(occurrence_id(a), occurrence_id(replace(a, **change)))
 
-    def test_scope_review_and_revision_filter_before_grouping(self):
+    def test_scope_review_and_revision_exclusion_without_receipt_conflicts(self):
         a = evidence()
-        rejected = [replace(a, tenant_id="other"), replace(a, project_id="other"),
-                    replace(a, revision=2), replace(a, document_id="unknown"),
-                    replace(a, review_status="pending"), replace(a, review_status="rejected"),
-                    replace(a, identity_verified=False), replace(a, reviewer="")]
-        for record in rejected:
+        out_of_scope = [replace(a, tenant_id="other"), replace(a, project_id="other"),
+                        replace(a, revision=2), replace(a, document_id="unknown")]
+        denied_reviews = [replace(a, review_status="pending"), replace(a, review_status="rejected"),
+                          replace(a, identity_verified=False), replace(a, reviewer="")]
+        for record in [*out_of_scope, *denied_reviews]:
             self.assertEqual(group_occurrences([record], scope()), ())
-        self.assertEqual(group_occurrences([a, *rejected], scope())[0].evidence, (a,))
+        self.assertEqual(group_occurrences([a, *out_of_scope], scope())[0].evidence, (a,))
+
+    def test_ineligible_receipt_conflicts_fail_closed_in_both_orders(self):
+        a = evidence()
+        for change in ({"review_status": "pending"}, {"review_status": "rejected"},
+                       {"identity_verified": False}, {"reviewer": ""}):
+            b = replace(a, **change)
+            self.assertEqual(occurrence_id(a), occurrence_id(b))
+            for records in ([a, b], [b, a], [a, b, a]):
+                with self.subTest(change=change, receipts=[r.evidence_id for r in records]):
+                    with self.assertRaisesRegex(ValueError, "^conflicting occurrence review$"):
+                        group_occurrences(records, scope())
+                    snapshot = {"schema": "radar-evidence-snapshot-v1",
+                                "evidence": [r.to_dict() for r in records]}
+                    with self.assertRaisesRegex(ValueError, "^conflicting occurrence review$"):
+                        preview(snapshot, scope())
+
+    def test_conflicts_without_an_eligible_occurrence_do_not_poison_other_sources(self):
+        a = evidence()
+        for change in ({"tenant_id": "other"}, {"project_id": "other"},
+                       {"revision": 2}, {"document_id": "unknown"}):
+            other = replace(a, **change)
+            self.assertEqual(group_occurrences([a, other, replace(other, review_status="rejected")],
+                                               scope())[0].evidence, (a,))
+        denied = replace(a, review_status="pending")
+        rejected = replace(a, review_status="rejected")
+        self.assertEqual(group_occurrences([denied, rejected], scope()), ())
+        b = evidence(document_id="doc-b", source_sha256="b" * 64)
+        self.assertEqual(group_occurrences([b, denied, rejected], scope())[0].evidence, (b,))
+
+    def test_distinct_occurrences_and_exact_replay_remain_independent(self):
+        a = evidence()
+        for change in ({"page": 2}, {"start": 1}, {"source_sha256": "c" * 64}):
+            denied = replace(a, review_status="rejected", **change)
+            snapshot = {"schema": "radar-evidence-snapshot-v1",
+                        "evidence": [denied.to_dict(), a.to_dict(), a.to_dict()]}
+            result = preview(snapshot, scope())
+            self.assertEqual((result["includedOccurrences"], result["excludedRecords"],
+                              result["duplicateRecords"]), (1, 1, 1))
 
     def test_content_hash_is_scoped_and_receipt_changes_fail_closed(self):
         a = evidence()
@@ -101,6 +139,24 @@ class OccurrenceTests(unittest.TestCase):
             self.assertEqual(run.returncode, 2)
             self.assertEqual(run.stdout, b"")
             self.assertEqual(json.loads(run.stderr), {"error": "EVIDENCE_PREVIEW_DENIED"})
+
+    def test_real_cli_conflicting_receipts_emit_no_partial_preview(self):
+        a = evidence()
+        with tempfile.TemporaryDirectory() as temporary:
+            config = Path(temporary) / "scope.json"
+            config.write_text(json.dumps(scope().to_dict()))
+            command = [sys.executable, "-m", "radar_evidence.research_preview", "--scope", str(config)]
+            for change in ({"review_status": "rejected"}, {"review_status": "pending"},
+                           {"identity_verified": False}, {"reviewer": ""}):
+                b = replace(a, **change)
+                for records in ([a, b], [b, a]):
+                    data = {"schema": "radar-evidence-snapshot-v1",
+                            "evidence": [r.to_dict() for r in records]}
+                    run = subprocess.run(command, input=json.dumps(data).encode(),
+                                         capture_output=True, timeout=5)
+                    self.assertEqual(run.returncode, 2)
+                    self.assertEqual(run.stdout, b"")
+                    self.assertEqual(run.stderr, b'{"error":"EVIDENCE_PREVIEW_DENIED"}\n')
 
 
 if __name__ == "__main__":

@@ -15,8 +15,15 @@ uma identidade de ocorrência por cliente/projeto/documento/revisão/página/spa
 source hash/text hash. Todas são SHA-256 completas de arrays JSON versionados,
 com UTF-8 e separadores compactos. O contrato JSON é verificável também em Node.
 
-Agrupar somente após `check_evidence` aprovar o registro no Scope confiável.
-Repetição exata não duplica; divergência de recibo da mesma ocorrência é erro.
+Registrar as identidades de ocorrência e recibo de todos os registros válidos
+antes de excluir registros inelegíveis. Agrupar somente os aprovados por
+`check_evidence` no Scope confiável. Se uma ocorrência que seria incluída tiver
+recibos divergentes, rejeitar a prévia inteira, independentemente da ordem:
+rejected/pending, identidade não verificada ou revisor ausente não podem ocultar
+uma divergência. Repetição exata não duplica. Conflitos apenas entre ocorrências
+que não seriam incluídas continuam excluídos, sem afetar outras fontes; tenant,
+projeto e revisão integram a identidade de ocorrência. O snapshot não possui
+ordem temporal autenticada para escolher uma decisão como mais recente.
 A prévia é composta de trechos existentes, sem geração de novas afirmações.
 
 ## Limites e integração

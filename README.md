@@ -18,7 +18,9 @@ ao pacote.
 documentos contêm texto igual. A identidade do conteúdo é separada da identidade
 da ocorrência (cliente, projeto, documento, revisão, página/span e hash do
 original). Repetições exatas são idempotentes; recibos de revisão conflitantes
-para a mesma ocorrência falham. Entram somente registros aprovados, na revisão
+para uma ocorrência que seria incluída fazem a prévia inteira falhar, inclusive
+quando o outro recibo é rejeitado, pendente, sem revisor ou sem identidade
+verificada. A ordem dos registros não escolhe a decisão vigente. Entram somente registros aprovados, na revisão
 atual, com o indicador de identidade exigido pelo contrato.
 
 Isso corrige o contrato próprio deste pacote, não modifica nem reindexa o
