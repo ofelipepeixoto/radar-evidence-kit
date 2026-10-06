@@ -1,0 +1,2 @@
+# Synthetic test; never issued by a provider.
+api_key = "aVglIhW7K5KzCtIHe7Q54Ps1gHE7YPqXadaDMBMv"
