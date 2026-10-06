@@ -1,4 +1,8 @@
-# radar-evidence-kit — experimental 0.1.0
+# radar-evidence-kit — experimental 0.2.0
+
+O contrato aditivo 0.2 inclui referências a trechos com contexto integral,
+revisão e hashes preservados. Veja [citações](docs/citacoes.md). Os contratos
+`Evidence`, `Scope` e journal existentes continuam compatíveis.
 
 Biblioteca **autoral de Carlos Felipe**, MIT, para contratos de evidência,
 recibos SQLite e exportação PROV-O selecionada. O núcleo Python 3.11+ usa
