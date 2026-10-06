@@ -23,7 +23,7 @@ python -m unittest discover -s tests -v
 ```
 
 O build usa `setuptools>=68`; o pacote instalado não tem dependências de
-runtime. Sem o motor opcional, a suíte tem 92 testes: 89 executados e os três
+runtime. Sem o motor opcional, a suíte tem 111 testes: 106 executados e os cinco
 testes reais do adapter explicitamente skipped. A CI verifica o núcleo em
 Python 3.11 e 3.12. A verificação local desta extração foi feita em Linux/Python
 3.12; a execução 3.11 depende do job de CI.
@@ -180,7 +180,7 @@ PYTHONDONTWRITEBYTECODE=1 RADAR_SEMANTICA_INTEGRATION=1 \
 Esta receita não instala o pacote SDK completo nem seus extras. Seus dez pins
 são versões efetivamente usadas; o probe bloqueia outros imports externos em
 um processo novo. Ele não é sandbox de rede nem substitui um ambiente confiável.
-A execução opcional ativa os três testes reais e executa os 92 testes da suíte.
+A execução opcional ativa os cinco testes reais e executa os 111 testes da suíte.
 O baseline e os gates específicos do experimento permanecem no consumidor
 referenciado acima.
 
@@ -197,3 +197,9 @@ a verificação dos bytes do original, a custódia independente do checkpoint e 
 permissões/retenção de dados do diário. Revise também o snapshot e as dependências
 opcionais se ativar o motor. Testes de contratos e recibos não validam esses
 controles de implantação ou a qualidade jurídica de uma aplicação.
+
+## Retirada e expiração de suporte — B / STUDY
+
+O [estudo de ciclo de suporte](docs/support-lifecycle-study.md) compara regras
+Radar com inserções e retiradas reais no motor opcional. O [registro da decisão](docs/semantica-adoption-review.md)
+explica a revisão MCP e o que permanece fora da adoção. Nenhum serviço é ativado.
