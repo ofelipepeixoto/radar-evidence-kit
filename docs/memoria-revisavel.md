@@ -19,6 +19,9 @@ aprovação e rejeição são terminais. Uma correção cria nova versão penden
 a versão aprovada anterior permanece disponível até nova aprovação.
 `pending` expõe somente a última proposta por nota para a tela de revisão,
 sem promovê-la à leitura aprovada. Fonte retirada ainda pode ser rejeitada.
+`latest` é visão de gestão, inclusive notas rejeitadas/retiradas, para correção
+ou descarte. Nunca consumi-la como memória aprovada. Descarte usa o recibo mais
+recente mesmo após undo; consumidor deve exibir versão e confirmar todas as versões.
 
 `recall` devolve somente versões ativas aprovadas, dentro de 30 dias no máximo,
 com todas as fontes ainda elegíveis. Revogar, alterar ou remover fonte bloqueia

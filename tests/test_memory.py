@@ -61,6 +61,15 @@ class MemoryTests(unittest.TestCase):
         self.assertEqual(self.db.pending(scope=Scope("other", "projeto-a", {}), now=102), [])
         self.assertEqual(self.db.pending(scope=self.scope, now=150), [])
 
+    def test_management_view_exposes_rejected_receipt_for_discard_only(self):
+        draft = self.draft()
+        self.decide(draft, decision="rejected")
+        self.assertEqual(self.recall(), [])
+        self.assertEqual(self.db.latest(scope=self.scope)[0]["status"], "rejected")
+        self.db.forget(scope=self.scope, note_id=draft["note_id"], proposal_hash=draft["proposal_hash"],
+                       actor="operator", now=102)
+        self.assertEqual(self.db.latest(scope=self.scope), [])
+
     def test_review_survives_restart(self):
         draft = self.draft()
         self.decide(draft)

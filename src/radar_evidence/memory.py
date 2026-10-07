@@ -209,15 +209,20 @@ class MemoryStore:
     def pending(self, *, scope, now):
         """Latest proposals for review only; never treat these as recall results."""
         _clock(now)
+        return [row for row in self.latest(scope=scope)
+                if row["status"] == "proposed" and row["created_at"] <= now < row["expires_at"]]
+
+    def latest(self, *, scope):
+        """Scoped management view, including rejected/withdrawn notes, NOT recall."""
         if type(scope) is not Scope:
             raise TypeError("trusted Scope required")
         with self._transaction() as db:
             rows = db.execute("SELECT n.* FROM notes n WHERE tenant=? AND project=? "
-                              "AND status='proposed' AND expires>? AND version="
+                              "AND payload IS NOT NULL AND version="
                               "(SELECT max(version) FROM notes p WHERE p.tenant=n.tenant "
                               "AND p.project=n.project AND p.note=n.note) ORDER BY note",
-                              (scope.tenant_id, scope.project_id, now)).fetchall()
-            return [dict(self._payload(row), proposal_hash=row["digest"], status="proposed")
+                              (scope.tenant_id, scope.project_id)).fetchall()
+            return [dict(self._payload(row), proposal_hash=row["digest"], status=row["status"])
                     for row in rows]
 
     def undo(self, *, scope, note_id, proposal_hash, actor, sources, now):
