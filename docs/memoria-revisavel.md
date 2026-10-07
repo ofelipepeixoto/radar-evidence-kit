@@ -17,6 +17,8 @@ Cada ID vincula revisão, documento, página, hashes da fonte e do texto e revis
 humana. `decide` exige o hash exato da última proposta e revisor distinto;
 aprovação e rejeição são terminais. Uma correção cria nova versão pendente;
 a versão aprovada anterior permanece disponível até nova aprovação.
+`pending` expõe somente a última proposta por nota para a tela de revisão,
+sem promovê-la à leitura aprovada. Fonte retirada ainda pode ser rejeitada.
 
 `recall` devolve somente versões ativas aprovadas, dentro de 30 dias no máximo,
 com todas as fontes ainda elegíveis. Revogar, alterar ou remover fonte bloqueia

@@ -1,7 +1,6 @@
 # Copyright (c) 2026 Carlos Felipe
 # SPDX-License-Identifier: MIT
 import concurrent.futures
-from dataclasses import replace
 import hashlib
 import json
 from pathlib import Path
@@ -54,6 +53,13 @@ class MemoryTests(unittest.TestCase):
     def test_proposal_is_not_visible(self):
         self.draft()
         self.assertEqual(self.recall(), [])
+
+    def test_review_queue_is_scoped_and_latest_only(self):
+        self.draft()
+        latest = self.draft(text="Última proposta.")
+        self.assertEqual(self.db.pending(scope=self.scope, now=102)[0]["proposal_hash"], latest["proposal_hash"])
+        self.assertEqual(self.db.pending(scope=Scope("other", "projeto-a", {}), now=102), [])
+        self.assertEqual(self.db.pending(scope=self.scope, now=150), [])
 
     def test_review_survives_restart(self):
         draft = self.draft()

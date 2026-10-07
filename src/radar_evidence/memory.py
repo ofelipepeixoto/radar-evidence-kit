@@ -206,6 +206,20 @@ class MemoryStore:
                                    reviewer=row["reviewer"], identity_verified=bool(row["verified"])))
         return result
 
+    def pending(self, *, scope, now):
+        """Latest proposals for review only; never treat these as recall results."""
+        _clock(now)
+        if type(scope) is not Scope:
+            raise TypeError("trusted Scope required")
+        with self._transaction() as db:
+            rows = db.execute("SELECT n.* FROM notes n WHERE tenant=? AND project=? "
+                              "AND status='proposed' AND expires>? AND version="
+                              "(SELECT max(version) FROM notes p WHERE p.tenant=n.tenant "
+                              "AND p.project=n.project AND p.note=n.note) ORDER BY note",
+                              (scope.tenant_id, scope.project_id, now)).fetchall()
+            return [dict(self._payload(row), proposal_hash=row["digest"], status="proposed")
+                    for row in rows]
+
     def undo(self, *, scope, note_id, proposal_hash, actor, sources, now):
         _identifier(actor, "actor")
         _clock(now)
