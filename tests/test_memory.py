@@ -3,10 +3,12 @@
 import concurrent.futures
 import hashlib
 import json
+import os
 from pathlib import Path
 import sqlite3
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from radar_evidence import Evidence, Scope
 from radar_evidence.memory import MemoryStore, MemoryError, MAX_TTL
@@ -185,6 +187,29 @@ class MemoryTests(unittest.TestCase):
         with self.assertRaises(MemoryError):
             self.db.undo(scope=self.scope, note_id=second["note_id"],
                          proposal_hash=second["proposal_hash"], actor="operator", sources=[], now=103)
+
+    def test_undo_after_new_approval_never_resurrects_undone_version(self):
+        first = self.draft()
+        self.decide(first)
+        second = self.draft(text="Segunda versão.")
+        self.decide(second)
+        def undo(draft):
+            self.db.undo(scope=self.scope, note_id=draft["note_id"], proposal_hash=draft["proposal_hash"],
+                         actor="operator", sources=self.sources, now=103)
+        undo(second)
+        third = self.draft(text="Terceira versão.")
+        self.decide(third)
+        undo(third)
+        self.assertEqual(self.recall()[0]["proposal_hash"], first["proposal_hash"])
+        self.assertEqual(self.db.latest(scope=self.scope)[0]["status"], "undone")
+        undo(first)
+        self.assertEqual(self.recall(), [])
+
+    def test_platform_without_nofollow_flag_can_open_operator_database(self):
+        with patch.dict(os.__dict__):
+            os.__dict__.pop("O_NOFOLLOW", None)
+            alternate = MemoryStore(Path(self.tmp.name) / "portable.sqlite3")
+            self.assertEqual(alternate.recall(scope=self.scope, sources=self.sources, now=102), [])
 
     def test_forget_erases_all_versions_and_replay_fails(self):
         first = self.draft()

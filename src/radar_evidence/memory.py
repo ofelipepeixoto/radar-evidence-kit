@@ -49,7 +49,7 @@ class MemoryStore:
             raise MemoryError("database symlinks are not supported")
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.local_review = local_review
-        fd = os.open(self.path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+        fd = os.open(self.path, os.O_CREAT | os.O_RDWR | getattr(os, "O_NOFOLLOW", 0), 0o600)
         os.close(fd)
         os.chmod(self.path, 0o600)
         with self._transaction() as db:
@@ -65,6 +65,9 @@ class MemoryStore:
                 CREATE TABLE IF NOT EXISTS events (
                   id INTEGER PRIMARY KEY, action TEXT, digest TEXT,
                   actor_hash TEXT, at INTEGER);
+                CREATE TABLE IF NOT EXISTS predecessors (
+                  tenant TEXT, project TEXT, note TEXT, version INTEGER,
+                  previous_version INTEGER, PRIMARY KEY(tenant,project,note,version));
             """)
 
     @contextmanager
@@ -181,6 +184,10 @@ class MemoryStore:
                 raise MemoryError("distinct reviewer required")
             if decision == "approved":
                 self._eligible(row, scope, eligible, now)
+                previous = db.execute("SELECT version FROM active WHERE tenant=? AND project=? AND note=?",
+                                      key).fetchone()
+                db.execute("INSERT INTO predecessors VALUES(?,?,?,?,?)",
+                           (*key, row["version"], previous[0] if previous else None))
                 db.execute("INSERT OR REPLACE INTO active VALUES(?,?,?,?)", (*key, row["version"]))
             db.execute("UPDATE notes SET status=?,reviewer=?,verified=? "
                        "WHERE tenant=? AND project=? AND note=? AND version=?",
@@ -231,9 +238,15 @@ class MemoryStore:
         eligible = self._sources(sources, scope)
         with self._transaction() as db:
             row, key = self._find(db, scope, note_id, proposal_hash, active=True)
-            previous = db.execute("SELECT * FROM notes WHERE tenant=? AND project=? AND note=? "
-                                  "AND status='approved' AND version<? ORDER BY version DESC LIMIT 1",
-                                  (*key, row["version"])).fetchone()
+            predecessor = db.execute("SELECT previous_version FROM predecessors "
+                                     "WHERE tenant=? AND project=? AND note=? AND version=?",
+                                     (*key, row["version"])).fetchone()
+            if predecessor is None:
+                raise MemoryError("legacy approval lacks predecessor; explicit withdrawal required")
+            previous = db.execute("SELECT * FROM notes WHERE tenant=? AND project=? AND note=? AND version=?",
+                                  (*key, predecessor[0])).fetchone() if predecessor[0] is not None else None
+            if predecessor[0] is not None and (previous is None or previous["status"] != "approved"):
+                raise MemoryError("predecessor approval is unavailable")
             if previous is not None:
                 if not previous["verified"] and not self.local_review:
                     raise MemoryError("verified review required")
@@ -242,6 +255,8 @@ class MemoryStore:
                            (previous["version"], *key))
             else:
                 db.execute("DELETE FROM active WHERE tenant=? AND project=? AND note=?", key)
+            db.execute("UPDATE notes SET status='undone' WHERE tenant=? AND project=? AND note=? AND version=?",
+                       (*key, row["version"]))
             self._event(db, "undo", proposal_hash, actor, now)
 
     def forget(self, *, scope, note_id, proposal_hash, actor, now):

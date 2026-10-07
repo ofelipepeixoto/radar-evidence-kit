@@ -29,6 +29,10 @@ imediatamente a próxima leitura. Isso não apaga automaticamente notas antigas:
 `forget` apaga o conteúdo de todas as versões e `purge_expired` apaga expiradas.
 `undo` restaura a aprovação anterior somente se suas fontes e validade ainda
 permitirem; na primeira versão, retira a nota. Não restaura conteúdo esquecido.
+O predecessor ativo é registrado na aprovação, não inferido por número de
+versão: uma nota já desfeita não reaparece após uma nova aprovação/undo.
+Aprovações de banco experimental anterior sem predecessor falham fechado no
+undo; descarte e nova proposta continuam possíveis, sem inventar histórico.
 
 ## Política e limites
 
@@ -44,6 +48,9 @@ permitirem; na primeira versão, retira a nota. Não restaura conteúdo esquecid
   transação distribuída com o banco de fontes: o consumidor deve serializar
   mudanças de fonte e operações de memória ou usar snapshot externo consistente.
 - Banco 0600, path controlado pelo operador, sem serviço público/multitenant.
+  Permissões 0600 são POSIX; no Windows o operador deve restringir ACLs. A
+  abertura usa O_NOFOLLOW quando disponível e checks de symlink em ambas;
+  sem esse flag não protege uma corrida de troca de path por outro usuário.
   Eventos contêm hashes de propostas e atores, sem texto das notas. O banco
   contém texto privado em claro e metadados; hashes de atores não anonimizam.
 - Verificação de digest detecta edição acidental do payload, não um operador
