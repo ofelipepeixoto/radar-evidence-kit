@@ -186,6 +186,12 @@ referenciado acima.
 
 ## Autoria, licença e revisão
 
+Piloto B — STUDY: [memória revisável de projeto](docs/memoria-revisavel.md)
+em `radar_evidence.memory`. Notas derivadas têm proposta, revisão vinculada ao
+hash, validade, undo e descarte; fontes atuais são verificadas a cada leitura.
+É contrato local experimental, sem provedor, runtime exxperts ou autenticação.
+Os 23 testes novos cobrem persistência, negativas e concorrência.
+
 Código deste pacote: MIT, Copyright (c) 2026 Carlos Felipe. Nenhum fonte
 Semantica foi copiado ou vendorizado. O motor opcional é dependência de terceiro,
 MIT, Copyright (c) 2026 Semantica; autoria, licença e versão permanecem
