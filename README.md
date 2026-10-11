@@ -197,3 +197,15 @@ a verificação dos bytes do original, a custódia independente do checkpoint e 
 permissões/retenção de dados do diário. Revise também o snapshot e as dependências
 opcionais se ativar o motor. Testes de contratos e recibos não validam esses
 controles de implantação ou a qualidade jurídica de uma aplicação.
+
+## Contratos de eventos públicos (offline)
+
+Nova fatia autoral de extração conceitual do estudo God’s Eye View: observação,
+horário de coleta, cobertura e proveniência; duas consultas de leitura sobre
+snapshots previamente configurados. Sem cópia de datasets/ativos upstream,
+conexão a provedores, LLM ou servidor MCP novo. A ponte ao Journal gera evidência
+**pendente**, sem aprovar publicação. [Contrato, execução e limites](docs/PUBLIC_EVENTS.md).
+
+```bash
+python examples/public_events_demo.py
+```
